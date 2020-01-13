@@ -1,5 +1,5 @@
 # TrackingLPSs_ERAI
-Tracking algorithm for monsoon LPSs
+Tracking algorithm for monsoon LPSs (applied to ERA-Interim)
 
 1. Tracking algorithm by Hodges
 2. Post-tracking filter
