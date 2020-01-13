@@ -161,7 +161,7 @@ end do
 do i_storm = 0,nLPS-1
 if(NUM(i_storm).ne.-1) then
   length = NUM(i_storm)
-
+ 
   str_lat = Lat(i_storm,0)
   str_lon = Lon(i_storm,0)
   end_lat = Lat(i_storm,length-1)
