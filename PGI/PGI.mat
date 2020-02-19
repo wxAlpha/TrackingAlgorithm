@@ -1,1 +1,68 @@
+%% 
+clear
+load datafile.mat
+
+iok = (~isnan(genesis(:)))&(~isnan(theta_e_lapse(:)))&(~isnan(q_verint(:)));
+y = genesis(iok);
+
+% Predictor: TCWV
+% Predictor: Vertical  
+% Predictor: Steering flow (U)
+% Predictor: vorticity
+% Predictor: column-integrated relative humidity 
+% Predictor: theta
+% Predictor: lapse rate
+xc = cat(1,vor_44ml(iok),shear(iok),theta_e_lapse(iok),theta_lapse(iok),rh_750(iok),rh_verint_750_650(iok),theta_e_850_grad(iok),theta_850(iok),theta_lapse(iok),w_44ml(iok),ECAPE(iok),vwnd(iok),vwnd_grad_lat(iok),qv(iok),TCWV(iok));
+mlvars = {'vor44ml','shear','theta_e_lapse','theta_lapse','rh_750','rh_verint','theta_e_grad','pot850','pot_lapse','w_44ml','ECAPE','vwnd','vwnd_grad','qv','TCWV'};
+
+xc = transpose(xc);
+y = transpose(y);
+offset = transpose(region(iok));
+
+% 
+family='poisson';
+fmax = 8;  % max number of features in the model
+nvars = size(mlvars,2);
+
+xf = 1:nvars;
+x = xc;
+
+for nf = 1:fmax
+  inmodel = sequentialfs(@critfun,x,y,log(offset),'cv',10,'nullmodel',true,'direction','forward','nfeatures',nf);
+  models{nf} = xf(inmodel);
+  sprintf('%s ',mlvars{xf(inmodel)})
+end
+
+% 
+clear DEV STD UL
+for nf = 1:fmax
+  x1 = x(:,models{nf});
+  [b,dev ,stats] = glmfit(x1,y,'poisson','offset',log(offset),'estdisp','on');
+  mu = glmval(b,x1,'log','offset',log(offset));
+  z = 2*(y .* (log((y+(y==0)) ./ mu)) - (y - mu));
+  smple = crossval(@critfun,x1,y,log(offset),'Mcreps',10);
+  DEV(nf) = mean(smple);
+  STD(nf) = std(smple);
+  UL(nf,:) = prctile(smple,[15,85]);
+end
+
+%
+figure(4)
+clf
+h=errorbar(xf(1:fmax),DEV,STD,'+k');
+set(h,'linewidth',1)
+xlabel('number of enviromental parameters')
+ylabel('deviance')
+set(gca,'xtick',[1:fmax],'xlim',[0,fmax+1])  
+set(gca,'ylim',[DEV(fmax)-STD(fmax)-100,DEV(1)+STD(1)+100])
+set(gcf,'position',[3,3,300,140])
+saveas(gcf,'log.pdf')
+
+%% ------------------
+nf = 5 % revising this value based on the above plot
+
+mlvars{models{nf}}
+x1 = x(:,models{nf});
+[b,dev ,stats] = glmfit(x1,y,'poisson','offset',log(offset),'estdisp','on');
+b
 
